@@ -1,12 +1,15 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_BASE = "http://localhost:8080/api";
+// ================= BASE URL (RENDER) =================
+const API_BASE = "https://ecommerce-backend-fi3h.onrender.com/api";
 
 // Axios instance
-const api = axios.create({ baseURL: API_BASE });
+const api = axios.create({
+  baseURL: API_BASE,
+});
 
-// Attach token
+// Attach token automatically
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -15,77 +18,47 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Helper to normalize user
-const formatUser = (data) => ({
-  id: data.userId,
-  name: data.name,
-  email: data.email,
-  role: data.role,
-});
-
-// ======================= REGISTER =======================
+// ================= REGISTER =================
 export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/register", userData);
+      const data = res.data.data;
 
-      const { success, message, data } = res.data;
-
-      if (!success) {
-        return rejectWithValue(message || "Register failed");
-      }
-
-      // Save token
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
 
-      // Save formatted user
-      const user = formatUser(data);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      return user;
-
+      return data;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Register failed"
+        err.response?.data?.message || "Register failed"
       );
     }
   }
 );
 
-// ======================= LOGIN =======================
+// ================= LOGIN =================
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/login", credentials);
-
-      const { success, message, data } = res.data;
-
-      if (!success) {
-        return rejectWithValue(message || "Login failed");
-      }
+      const data = res.data.data;
 
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
 
-      const user = formatUser(data);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      return user;
-
+      return data;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Login failed"
+        err.response?.data?.message || "Login failed"
       );
     }
   }
 );
 
-// ======================= GET PROFILE =======================
+// ================= PROFILE =================
 export const fetchProfile = createAsyncThunk(
   "auth/profile",
   async (_, { rejectWithValue }) => {
@@ -93,14 +66,12 @@ export const fetchProfile = createAsyncThunk(
       const res = await api.get("/users/profile");
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch profile"
-      );
+      return rejectWithValue("Failed to fetch profile");
     }
   }
 );
 
-// ======================= UPDATE PROFILE =======================
+// ================= UPDATE PROFILE =================
 export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
   async (payload, { rejectWithValue }) => {
@@ -108,14 +79,12 @@ export const updateProfile = createAsyncThunk(
       const res = await api.put("/users/profile", payload);
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Update failed"
-      );
+      return rejectWithValue("Update failed");
     }
   }
 );
 
-// ======================= GET ALL USERS =======================
+// ================= ALL USERS (ADMIN ONLY) =================
 export const fetchAllUsers = createAsyncThunk(
   "auth/fetchAllUsers",
   async (_, { rejectWithValue }) => {
@@ -123,14 +92,12 @@ export const fetchAllUsers = createAsyncThunk(
       const res = await api.get("/users/all");
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch users"
-      );
+      return rejectWithValue("Failed to fetch users");
     }
   }
 );
 
-// ======================= DELETE USER =======================
+// ================= DELETE USER (ADMIN ONLY) =================
 export const deleteUser = createAsyncThunk(
   "auth/deleteUser",
   async (id, { rejectWithValue }) => {
@@ -138,14 +105,12 @@ export const deleteUser = createAsyncThunk(
       await api.delete(`/users/${id}`);
       return id;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Delete failed"
-      );
+      return rejectWithValue("Delete failed");
     }
   }
 );
 
-// ======================= SLICE =======================
+// ================= SLICE =================
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -154,6 +119,7 @@ const authSlice = createSlice({
     loading: false,
     error: null,
   },
+
   reducers: {
     logout: (state) => {
       localStorage.removeItem("token");
@@ -161,12 +127,12 @@ const authSlice = createSlice({
       state.user = null;
     },
   },
+
   extraReducers: (builder) => {
     builder
       // REGISTER
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
@@ -180,7 +146,6 @@ const authSlice = createSlice({
       // LOGIN
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;

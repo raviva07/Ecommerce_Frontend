@@ -11,7 +11,7 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:8080/api/users/profile", {
+      const res = await axios.get("https://ecommerce-backend-fi3h.onrender.com/api/users/profile", {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -33,7 +33,7 @@ const Profile = () => {
     try {
       setLoading(true);
       const res = await axios.put(
-        "http://localhost:8080/api/users/profile",
+        "https://ecommerce-backend-fi3h.onrender.com/api/users/profile",
         user,
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -1,5 +1,9 @@
-// src/hooks/useAuth.jsx
-import React, { useState, useEffect, createContext, useContext } from "react";
+import React, {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+} from "react";
 import axiosInstance from "../api/axiosInstance";
 
 const AuthContext = createContext(null);
@@ -7,14 +11,16 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
+      return JSON.parse(localStorage.getItem("user")) || null;
     } catch {
       return null;
     }
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem("token") || null);
+  const [token, setToken] = useState(
+    () => localStorage.getItem("token") || null
+  );
+
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -30,93 +36,105 @@ export const AuthProvider = ({ children }) => {
     setUser(userObj || null);
   };
 
+  // ================= NORMALIZE USER (IMPORTANT FIX) =================
+  const normalizeUser = (data) => {
+    if (!data) return null;
+
+    return {
+      id: data.userId || data.id || null,
+      name: data.name || data.email || "",
+      email: data.email,
+      role: data.role || "CUSTOMER", // default safety
+    };
+  };
+
   // ================= INIT =================
   useEffect(() => {
     const init = async () => {
       const existingToken = localStorage.getItem("token");
+
       if (existingToken) {
-        await getProfile();
+        try {
+          await getProfile();
+        } catch {
+          logout();
+        }
       }
+
       setInitialized(true);
     };
+
     init();
-    // eslint-disable-next-line
   }, []);
 
-  // ================= REGISTER =================
+  // ================= REGISTER (ROLE BASED FIX) =================
   const register = async ({ name, email, password, role = "CUSTOMER" }) => {
     setLoading(true);
+
     try {
       const res = await axiosInstance.post("/api/auth/register", {
         name,
         email,
         password,
-        role,
+        role, // 👈 ADMIN or CUSTOMER
       });
 
-      const { success, message, data } = res.data;
+      const { data } = res.data || {};
 
-      if (!success) {
-        return { success: false, message };
+      if (!data?.token) {
+        return { success: false, message: "Registration failed" };
       }
 
-      const userObj = {
-        id: data.userId,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      };
+      const userObj = normalizeUser(data);
 
       saveAuth(data.token, userObj);
 
-      return { success: true, message, data };
-
+      return {
+        success: true,
+        message: "Registered successfully",
+        data,
+      };
     } catch (error) {
       return {
         success: false,
         message:
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          "Registration failed",
+          error.response?.data?.message || "Registration failed",
       };
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= LOGIN =================
+  // ================= LOGIN (ROLE BASED FIX) =================
   const login = async ({ email, password }) => {
     setLoading(true);
+
     try {
       const res = await axiosInstance.post("/api/auth/login", {
         email,
         password,
       });
 
-      const { success, message, data } = res.data;
+      const { data } = res.data || {};
 
-      if (!success) {
-        return { success: false, message };
+      if (!data?.token) {
+        return { success: false, message: "Login failed" };
       }
 
-      const userObj = {
-        id: data.userId,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      };
+      const userObj = normalizeUser(data);
 
       saveAuth(data.token, userObj);
 
-      return { success: true, message, data };
-
+      return {
+        success: true,
+        message: "Login successful",
+        data,
+      };
     } catch (error) {
       return {
         success: false,
         message:
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          "Login failed",
+          error.response?.data?.message || "Login failed",
       };
     } finally {
       setLoading(false);
@@ -128,37 +146,29 @@ export const AuthProvider = ({ children }) => {
     saveAuth(null, null);
   };
 
-  // ================= GET PROFILE =================
+  // ================= PROFILE =================
   const getProfile = async () => {
     try {
       const res = await axiosInstance.get("/api/users/profile");
       const data = res.data?.data;
 
-      if (!data) return;
+      if (!data) throw new Error("No profile");
 
-      const userObj = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      };
+      const userObj = normalizeUser(data);
 
       saveAuth(localStorage.getItem("token"), userObj);
 
       return { success: true, data: userObj };
-
     } catch (error) {
       logout();
-      return {
-        success: false,
-        message: "Session expired",
-      };
+      return { success: false, message: "Session expired" };
     }
   };
 
   // ================= UPDATE PROFILE =================
   const updateProfile = async ({ name, email }) => {
     setLoading(true);
+
     try {
       const res = await axiosInstance.put("/api/users/profile", {
         name,
@@ -167,17 +177,11 @@ export const AuthProvider = ({ children }) => {
 
       const data = res.data?.data;
 
-      const userObj = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      };
+      const userObj = normalizeUser(data);
 
       saveAuth(localStorage.getItem("token"), userObj);
 
       return { success: true, data: userObj };
-
     } catch (error) {
       return {
         success: false,
@@ -193,29 +197,29 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = user?.role === "ADMIN";
   const isCustomer = user?.role === "CUSTOMER";
 
-  // ================= CONTEXT =================
-  const value = {
-    user,
-    token,
-    loading,
-    initialized,
-    register,
-    login,
-    logout,
-    getProfile,
-    updateProfile,
-    isAdmin,
-    isCustomer,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        initialized,
+        register,
+        login,
+        logout,
+        getProfile,
+        updateProfile,
+        isAdmin,
+        isCustomer,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// ================= HOOK =================
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 };

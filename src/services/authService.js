@@ -1,11 +1,10 @@
 import axiosInstance from "../api/axiosInstance";
 
-// ================= REGISTER =================
+// ================= REGISTER (ROLE BASED) =================
 export const register = async (payload) => {
   try {
     const res = await axiosInstance.post("/api/auth/register", payload);
 
-    // backend response
     const { success, message, data } = res.data;
 
     if (!success) {
@@ -15,7 +14,7 @@ export const register = async (payload) => {
       };
     }
 
-    // Save token + user (same as login)
+    // Save auth
     if (data?.token) {
       localStorage.setItem("token", data.token);
 
@@ -25,7 +24,7 @@ export const register = async (payload) => {
           id: data.userId,
           name: data.name,
           email: data.email,
-          role: data.role,
+          role: data.role, // ADMIN or CUSTOMER
         })
       );
     }
@@ -35,13 +34,11 @@ export const register = async (payload) => {
       message,
       data,
     };
-
   } catch (error) {
     return {
       success: false,
       message:
         error.response?.data?.message ||
-        error.response?.data?.error ||
         "Registration failed",
     };
   }
@@ -64,7 +61,7 @@ export const login = async ({ email, password }) => {
       };
     }
 
-    // Save token + user
+    // Save auth
     localStorage.setItem("token", data.token);
 
     localStorage.setItem(
@@ -82,13 +79,11 @@ export const login = async ({ email, password }) => {
       message,
       data,
     };
-
   } catch (error) {
     return {
       success: false,
       message:
         error.response?.data?.message ||
-        error.response?.data?.error ||
         "Login failed",
     };
   }

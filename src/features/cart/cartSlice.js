@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/cart";
+const API_BASE = "https://ecommerce-backend-fi3h.onrender.com/api/cart";
 
 // Helper for auth header
 const getAuthConfig = (getState) => {

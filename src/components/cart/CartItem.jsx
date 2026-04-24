@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "https://ecommerce-backend-fi3h.onrender.com/api";
+
 
 const CartItem = ({ item, token, refreshCart }) => {
   const [quantity, setQuantity] = useState(item.quantity);

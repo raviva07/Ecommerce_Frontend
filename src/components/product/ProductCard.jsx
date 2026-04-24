@@ -3,7 +3,8 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import Loader from "../common/Loader";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = "https://ecommerce-backend-fi3h.onrender.com/api";
+
 
 const ProductCard = ({ product, refreshProducts }) => {
   const [loading, setLoading] = useState(false);
