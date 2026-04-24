@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 // ================= BASE URL (RENDER) =================
-const API_BASE = "https://ecommerce-backend-fi3h.onrender.com/api";
+const API_BASE = "https://ecommerce-backend-ammx.onrender.com/api";
 
 // Axios instance
 const api = axios.create({

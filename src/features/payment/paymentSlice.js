@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API = "https://ecommerce-backend-fi3h.onrender.com/api/payment";
+const API = "https://ecommerce-backend-ammx.onrender.com/api/payment";
 
 // 🔐 Helper to get token
 const getAuthConfig = () => ({

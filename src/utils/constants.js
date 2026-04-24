@@ -1,7 +1,7 @@
 // ==============================
 // API BASE CONFIG
 // ==============================
-export const BASE_URL = "https://ecommerce-backend-fi3h.onrender.com/api";
+export const BASE_URL = "https://ecommerce-backend-ammx.onrender.com/api";
 // ==============================
 // AUTH ENDPOINTS
 // ==============================

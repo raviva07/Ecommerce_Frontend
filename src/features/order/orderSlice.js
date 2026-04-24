@@ -2,8 +2,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_URL = "https://ecommerce-backend-fi3h.onrender.com/api/orders";
-const PAYMENT_URL = "https://ecommerce-backend-fi3h.onrender.com/api/payment";
+const API_URL = "https://ecommerce-backend-ammx.onrender.com/api/orders";
+const PAYMENT_URL = "https://ecommerce-backend-ammx.onrender.com/api/payment";
 
 
 const getAuthConfig = (getState) => {

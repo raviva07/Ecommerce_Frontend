@@ -3,7 +3,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import Loader from "../common/Loader";
 
-const API_BASE = "https://ecommerce-backend-fi3h.onrender.com/api";
+const API_BASE = "https://ecommerce-backend-ammx.onrender.com/api";
 
 
 const ProductCard = ({ product, refreshProducts }) => {

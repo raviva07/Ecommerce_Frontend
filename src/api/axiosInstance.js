@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://ecommerce-backend-fi3h.onrender.com",
+  baseURL: "https://ecommerce-backend-ammx.onrender.com",
   headers: {
     "Content-Type": "application/json",
   },
