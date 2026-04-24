@@ -1,7 +1,6 @@
 // src/api/axiosInstance.js
 import axios from "axios";
 
-// ✅ SAME PATTERN AS REALESTATE
 const axiosInstance = axios.create({
   baseURL:
     import.meta.env.VITE_API_BASE_URL ||
@@ -9,7 +8,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
+  // ❌ REMOVE withCredentials (important)
 });
 
 // ✅ REQUEST INTERCEPTOR
@@ -26,7 +25,7 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ RESPONSE INTERCEPTOR (same style)
+// ✅ RESPONSE INTERCEPTOR
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
