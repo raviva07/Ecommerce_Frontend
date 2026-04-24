@@ -2,15 +2,6 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 import axiosInstance from "../api/axiosInstance";
 
-/**
- * Auth context + hook
- *
- * - Stores token under localStorage.token
- * - Stores user (pure object) under localStorage.user
- * - Exposes login/register/logout/getProfile/updateProfile
- * - Exposes initialized, loading, isAdmin, isCustomer
- */
-
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -22,11 +13,12 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
+
   const [token, setToken] = useState(() => localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  // Helper to persist auth to localStorage and state
+  // ================= SAVE AUTH =================
   const saveAuth = (tokenValue, userObj) => {
     if (tokenValue) localStorage.setItem("token", tokenValue);
     else localStorage.removeItem("token");
@@ -38,30 +30,20 @@ export const AuthProvider = ({ children }) => {
     setUser(userObj || null);
   };
 
-  // Initialize on app start: if token exists, try to fetch profile
+  // ================= INIT =================
   useEffect(() => {
     const init = async () => {
       const existingToken = localStorage.getItem("token");
       if (existingToken) {
-        try {
-          await getProfile(); // will set user if token valid
-        } catch (err) {
-          // invalid token or profile fetch failed -> clear auth
-          console.error("Auth init failed:", err);
-          logout();
-        }
+        await getProfile();
       }
       setInitialized(true);
     };
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, []);
 
-  /* ===========================
-     REGISTER
-     POST /api/auth/register
-     Expected backend response: { success: true, data: { token, user } }
-  =========================== */
+  // ================= REGISTER =================
   const register = async ({ name, email, password, role = "CUSTOMER" }) => {
     setLoading(true);
     try {
@@ -71,102 +53,88 @@ export const AuthProvider = ({ children }) => {
         password,
         role,
       });
-      const payload = res.data?.data;
 
-      // If backend returns token + user, persist both
-      if (payload?.token && payload?.user) {
-        saveAuth(payload.token, payload.user);
-      } else if (payload?.token && payload?.userId) {
-        // fallback for older shape: build user object from returned fields
-        const userObj = {
-          id: payload.userId,
-          name: payload.name,
-          email: payload.email,
-          role: payload.role || "CUSTOMER",
-        };
-        saveAuth(payload.token, userObj);
+      const { success, message, data } = res.data;
+
+      if (!success) {
+        return { success: false, message };
       }
 
-      return { success: true, data: payload };
+      const userObj = {
+        id: data.userId,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      };
+
+      saveAuth(data.token, userObj);
+
+      return { success: true, message, data };
+
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed",
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Registration failed",
       };
     } finally {
       setLoading(false);
     }
   };
 
-  /* ===========================
-     LOGIN
-     POST /api/auth/login
-     Expected backend response: { success: true, data: { token, user } }
-  =========================== */
+  // ================= LOGIN =================
   const login = async ({ email, password }) => {
     setLoading(true);
     try {
-      const res = await axiosInstance.post("/api/auth/login", { email, password });
-      const payload = res.data?.data;
+      const res = await axiosInstance.post("/api/auth/login", {
+        email,
+        password,
+      });
 
-      if (payload?.token && payload?.user) {
-        // ideal shape
-        saveAuth(payload.token, payload.user);
-      } else if (payload?.token && payload?.userId) {
-        // fallback: backend returned flattened fields
-        const userObj = {
-          id: payload.userId,
-          name: payload.name,
-          email: payload.email,
-          role: payload.role || "CUSTOMER",
-        };
-        saveAuth(payload.token, userObj);
-      } else if (payload?.token && payload?.email && payload?.role) {
-        // another fallback shape
-        const userObj = {
-          id: payload.userId || null,
-          name: payload.name || payload.email,
-          email: payload.email,
-          role: payload.role,
-        };
-        saveAuth(payload.token, userObj);
-      } else {
-        // If backend returns token only, store token and attempt profile fetch
-        if (payload?.token) {
-          saveAuth(payload.token, null);
-          await getProfile();
-        }
+      const { success, message, data } = res.data;
+
+      if (!success) {
+        return { success: false, message };
       }
 
-      return { success: true, data: payload };
+      const userObj = {
+        id: data.userId,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      };
+
+      saveAuth(data.token, userObj);
+
+      return { success: true, message, data };
+
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Login failed",
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Login failed",
       };
     } finally {
       setLoading(false);
     }
   };
 
-  /* ===========================
-     LOGOUT
-  =========================== */
+  // ================= LOGOUT =================
   const logout = () => {
     saveAuth(null, null);
   };
 
-  /* ===========================
-     GET PROFILE
-     GET /api/users/profile
-     Expected response: { success: true, data: { id, name, email, role } }
-  =========================== */
+  // ================= GET PROFILE =================
   const getProfile = async () => {
-    setLoading(true);
     try {
       const res = await axiosInstance.get("/api/users/profile");
       const data = res.data?.data;
-      if (!data) throw new Error("No profile data");
+
+      if (!data) return;
 
       const userObj = {
         id: data.id,
@@ -174,30 +142,30 @@ export const AuthProvider = ({ children }) => {
         email: data.email,
         role: data.role,
       };
-      // persist user (keep existing token)
+
       saveAuth(localStorage.getItem("token"), userObj);
 
       return { success: true, data: userObj };
+
     } catch (error) {
+      logout();
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch profile",
+        message: "Session expired",
       };
-    } finally {
-      setLoading(false);
     }
   };
 
-  /* ===========================
-     UPDATE PROFILE
-     PUT /api/users/profile
-  =========================== */
+  // ================= UPDATE PROFILE =================
   const updateProfile = async ({ name, email }) => {
     setLoading(true);
     try {
-      const res = await axiosInstance.put("/api/users/profile", { name, email });
+      const res = await axiosInstance.put("/api/users/profile", {
+        name,
+        email,
+      });
+
       const data = res.data?.data;
-      if (!data) throw new Error("No profile data");
 
       const userObj = {
         id: data.id,
@@ -205,28 +173,27 @@ export const AuthProvider = ({ children }) => {
         email: data.email,
         role: data.role,
       };
+
       saveAuth(localStorage.getItem("token"), userObj);
 
       return { success: true, data: userObj };
+
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Update failed",
+        message:
+          error.response?.data?.message || "Update failed",
       };
     } finally {
       setLoading(false);
     }
   };
 
-  /* ===========================
-     ROLE HELPERS
-  =========================== */
+  // ================= ROLE HELPERS =================
   const isAdmin = user?.role === "ADMIN";
   const isCustomer = user?.role === "CUSTOMER";
 
-  /* ===========================
-     CONTEXT VALUE
-  =========================== */
+  // ================= CONTEXT =================
   const value = {
     user,
     token,
@@ -244,13 +211,11 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-/* ===========================
-   CUSTOM HOOK
-=========================== */
+// ================= HOOK =================
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return ctx;
 };

@@ -15,18 +15,42 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Helper to normalize user
+const formatUser = (data) => ({
+  id: data.userId,
+  name: data.name,
+  email: data.email,
+  role: data.role,
+});
+
 // ======================= REGISTER =======================
 export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/register", userData);
-      const data = res.data.data;
+
+      const { success, message, data } = res.data;
+
+      if (!success) {
+        return rejectWithValue(message || "Register failed");
+      }
+
+      // Save token
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data));
-      return data;
+
+      // Save formatted user
+      const user = formatUser(data);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return user;
+
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Register failed");
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Register failed"
+      );
     }
   }
 );
@@ -37,12 +61,26 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/login", credentials);
-      const data = res.data.data;
+
+      const { success, message, data } = res.data;
+
+      if (!success) {
+        return rejectWithValue(message || "Login failed");
+      }
+
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data));
-      return data;
+
+      const user = formatUser(data);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return user;
+
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Login failed");
+      return rejectWithValue(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Login failed"
+      );
     }
   }
 );
@@ -55,7 +93,9 @@ export const fetchProfile = createAsyncThunk(
       const res = await api.get("/users/profile");
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch profile");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch profile"
+      );
     }
   }
 );
@@ -68,12 +108,14 @@ export const updateProfile = createAsyncThunk(
       const res = await api.put("/users/profile", payload);
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Update failed");
+      return rejectWithValue(
+        err.response?.data?.message || "Update failed"
+      );
     }
   }
 );
 
-// ======================= GET ALL USERS (ADMIN) =======================
+// ======================= GET ALL USERS =======================
 export const fetchAllUsers = createAsyncThunk(
   "auth/fetchAllUsers",
   async (_, { rejectWithValue }) => {
@@ -81,12 +123,14 @@ export const fetchAllUsers = createAsyncThunk(
       const res = await api.get("/users/all");
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch users");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch users"
+      );
     }
   }
 );
 
-// ======================= DELETE USER (ADMIN) =======================
+// ======================= DELETE USER =======================
 export const deleteUser = createAsyncThunk(
   "auth/deleteUser",
   async (id, { rejectWithValue }) => {
@@ -94,7 +138,9 @@ export const deleteUser = createAsyncThunk(
       await api.delete(`/users/${id}`);
       return id;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Delete failed");
+      return rejectWithValue(
+        err.response?.data?.message || "Delete failed"
+      );
     }
   }
 );
@@ -120,6 +166,7 @@ const authSlice = createSlice({
       // REGISTER
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
@@ -133,6 +180,7 @@ const authSlice = createSlice({
       // LOGIN
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
@@ -144,55 +192,23 @@ const authSlice = createSlice({
       })
 
       // PROFILE
-      .addCase(fetchProfile.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(fetchProfile.fulfilled, (state, action) => {
-        state.loading = false;
         state.user = { ...state.user, ...action.payload };
-      })
-      .addCase(fetchProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       })
 
       // UPDATE PROFILE
-      .addCase(updateProfile.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        state.loading = false;
         state.user = { ...state.user, ...action.payload };
-      })
-      .addCase(updateProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       })
 
       // ALL USERS
-      .addCase(fetchAllUsers.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(fetchAllUsers.fulfilled, (state, action) => {
-        state.loading = false;
         state.users = action.payload;
-      })
-      .addCase(fetchAllUsers.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       })
 
       // DELETE USER
-      .addCase(deleteUser.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(deleteUser.fulfilled, (state, action) => {
-        state.loading = false;
         state.users = state.users.filter((u) => u.id !== action.payload);
-      })
-      .addCase(deleteUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       });
   },
 });
